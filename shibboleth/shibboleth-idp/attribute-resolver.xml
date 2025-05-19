@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+This file is a rudimentary example. While it is semi-functional, it isn't very
+interesting. It is here only as a starting point for your deployment process
+to avoid any dependency on components like an LDAP directory.
+
+Very few attribute definitions and data connectors are demonstrated, and the
+data is derived statically from the logged-in username and a static example
+connector.
+
+The file(s) in the examples directory contain more examples that involve more
+complex approaches. Deployers should refer to the documentation for a complete
+list of possible components and their options.
+-->
+<AttributeResolver
+        xmlns="urn:mace:shibboleth:2.0:resolver" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="urn:mace:shibboleth:2.0:resolver http://shibboleth.net/schema/idp/shibboleth-attribute-resolver.xsd">
+
+
+    <!-- ========================================== -->
+    <!--      Attribute Definitions                 -->
+    <!-- ========================================== -->
+
+    <!--
+    The EPPN is the "standard" federated username in higher ed.
+    For guidelines on the implementation of this attribute, refer
+    to the Shibboleth and eduPerson documentation. Above all, do
+    not expose a value for this attribute without considering the
+    long term implications. 
+    -->
+    <AttributeDefinition id="eduPersonPrincipalName" xsi:type="Scoped" scope="%{idp.scope}">
+        <InputAttributeDefinition ref="uid" />
+    </AttributeDefinition>
+
+    <!--
+    The uid is the closest thing to a "standard" LDAP attribute
+    representing a local username, but you should generally *never*
+    expose uid to federated services, as it is rarely globally unique.
+    -->
+    <AttributeDefinition id="uid" xsi:type="PrincipalName" />
+
+    <!--
+    In the rest of the world, the email address is the standard identifier,
+    despite the problems with that practice. Consider making the EPPN
+    value the same as your official email addresses whenever possible.
+    -->
+    <AttributeDefinition id="mail" xsi:type="Template">
+        <InputAttributeDefinition ref="uid" />
+        <Template>
+          <![CDATA[
+               ${uid}@example.org
+          ]]>
+        </Template>
+    </AttributeDefinition>
+
+    <!--
+    This is an example of an attribute sourced from a data connector.
+    -->
+    <AttributeDefinition id="eduPersonScopedAffiliation" xsi:type="Scoped" scope="%{idp.scope}">
+        <InputDataConnector ref="staticAttributes" attributeNames="affiliation" />
+    </AttributeDefinition>
+
+
+    <!-- ========================================== -->
+    <!--      Data Connectors                       -->
+    <!-- ========================================== -->
+
+    <DataConnector id="staticAttributes" xsi:type="Static" exportAttributes="schacHomeOrganization">
+        <Attribute id="schacHomeOrganization">
+            <Value>%{idp.scope}</Value>
+        </Attribute>
+        <Attribute id="affiliation">
+            <Value>member</Value>
+        </Attribute>
+    </DataConnector>
+
+<!-- 增加 attribute 配置，这里的 AttributeEncoder 中的 name 属性在多个 atribute 中不能重复 -->
+<AttributeDefinition xsi:type="Simple" id="uid">
+    <InputDataConnector ref="myLDAP" attributeNames="uid"/>
+    <AttributeEncoder xsi:type="SAML1String" name="urn:mace:dir:attribute-def:uid" encodeType="false" />
+    <AttributeEncoder xsi:type="SAML2String" name="urn:oid:0.9.2342.19200300.100.1.1" friendlyName="uid" encodeType="false" />
+</AttributeDefinition>
+
+<AttributeDefinition xsi:type="Simple" id="surname">
+    <InputDataConnector ref="myLDAP" attributeNames="sn"/>
+    <AttributeEncoder xsi:type="SAML1String" name="urn:mace:dir:attribute-def:sn" encodeType="false" />
+    <AttributeEncoder xsi:type="SAML2String" name="urn:oid:2.5.4.4" friendlyName="sn" encodeType="false" />
+</AttributeDefinition>
+
+<AttributeDefinition xsi:type="Simple" id="givenName">
+    <InputDataConnector ref="myLDAP" attributeNames="givenName"/>
+    <AttributeEncoder xsi:type="SAML1String" name="urn:mace:dir:attribute-def:givenName" encodeType="false" />
+    <AttributeEncoder xsi:type="SAML2String" name="urn:oid:2.5.4.42" friendlyName="givenName" encodeType="false" />
+</AttributeDefinition>
+
+<AttributeDefinition xsi:type="Simple" id="displayName">
+    <InputDataConnector ref="myLDAP" attributeNames="displayName"/>
+    <AttributeEncoder xsi:type="SAML1String" name="urn:mace:dir:attribute-def:displayName" encodeType="false" />
+    <AttributeEncoder xsi:type="SAML2String" name="urn:oid:2.16.840.1.113730.3.1.241" friendlyName="displayName" encodeType="false" />
+</AttributeDefinition>
+
+<!-- 获取用户所属角色信息，这里必须配置，否则对接 Rancher 后无法获取用户组信息 -->
+<AttributeDefinition xsi:type="Simple" id="memberOf">
+    <InputDataConnector ref="myLDAP" attributeNames="memberOf"/>
+    <AttributeEncoder xsi:type="SAML1String" name="urn:mace:dir:attribute-def:memberOf" encodeType="false" />
+    <AttributeEncoder xsi:type="SAML2String" name="urn:oid:2.16.840.1.113730.3.1.244" friendlyName="memberOf" encodeType="false" />
+</AttributeDefinition>
+
+<AttributeDefinition xsi:type="Simple" id="entryDN">
+    <InputDataConnector ref="myLDAP" attributeNames="entryDN"/>
+    <AttributeEncoder xsi:type="SAML1String" name="urn:mace:dir:attribute-def:entryDN" encodeType="false" />
+    <AttributeEncoder xsi:type="SAML2String" name="urn:oid:2.5.4.5" friendlyName="entryDN" encodeType="false" />
+</AttributeDefinition>
+
+<AttributeDefinition xsi:type="Simple" id="entryUUID">
+    <InputDataConnector ref="myLDAP" attributeNames="entryUUID"/>
+    <AttributeEncoder xsi:type="SAML1String" name="urn:mace:dir:attribute-def:entryUUID" encodeType="false" />
+    <AttributeEncoder xsi:type="SAML2String" name="urn:oid:2.5.4.6" friendlyName="entryUUID" encodeType="false" />
+</AttributeDefinition>
+
+<!-- 示例中的 myLDAP 配置中增加 ReturnAttributes 属性 -->
+<DataConnector id="myLDAP" xsi:type="LDAPDirectory"
+    ldapURL="%{idp.attribute.resolver.LDAP.ldapURL}"
+    baseDN="%{idp.attribute.resolver.LDAP.baseDN}"
+    principal="%{idp.attribute.resolver.LDAP.bindDN}"
+    principalCredential="%{idp.attribute.resolver.LDAP.bindDNCredential}"
+    useStartTLS="%{idp.attribute.resolver.LDAP.useStartTLS:true}"
+    connectTimeout="%{idp.attribute.resolver.LDAP.connectTimeout}"
+    responseTimeout="%{idp.attribute.resolver.LDAP.responseTimeout}">
+    <FilterTemplate>
+        <![CDATA[
+            %{idp.attribute.resolver.LDAP.searchFilter}
+        ]]>
+    </FilterTemplate>
+    <ConnectionPool
+        minPoolSize="%{idp.pool.LDAP.minSize:3}"
+        maxPoolSize="%{idp.pool.LDAP.maxSize:10}"
+        blockWaitTime="%{idp.pool.LDAP.blockWaitTime:PT3S}"
+        validatePeriodically="%{idp.pool.LDAP.validatePeriodically:true}"
+        validateTimerPeriod="%{idp.pool.LDAP.validatePeriod:PT5M}"
+        expirationTime="%{idp.pool.LDAP.idleTime:PT10M}" />
+    <ReturnAttributes>%{idp.attribute.resolver.LDAP.returnAttributes}</ReturnAttributes>
+</DataConnector>
+
+</AttributeResolver>
